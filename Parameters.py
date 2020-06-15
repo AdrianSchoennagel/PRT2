@@ -21,7 +21,7 @@ sim_para.max_step = 0.01 # maximum step size for RK45
 # LISTING_START PT1-Glied
 para_pt1 = Parameters()
 para_pt1.T = 2
-para_pt1.Kp = 1
+para_pt1.Kp = 0.1
 # LISTING_END PT1-Glied
 
 # LISTING_START D-Glied

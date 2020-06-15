@@ -26,7 +26,7 @@ class D_Block():
     def calc(self, u):
         if self.u_past is None:
             self.u_past = u
-        du = np.gradient([self.u_past, u])
+        du = np.gradient([self.u_past, u], sim_para.dt)
         self.u_past = u
         return du * self.Kd
 

@@ -24,7 +24,7 @@ for t in tt:
     u_traj.append(u_cur)
 
     y_pt1 = pt1.calc(u_cur, t, t + sim_para.dt)
-    y_out = d.calc(u_cur)
+    y_out = d.calc(y_pt1[0])
 
     x_traj.append(y_pt1[0])
     x_traj2.append(y_out[0])
