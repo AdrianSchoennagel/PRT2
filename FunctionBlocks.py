@@ -40,3 +40,48 @@ class PT1_Block(Abstract_Block):
     def ode(self, t, x, u):
         dxdt = np.array([(self.Kp * u - x) / self.T])
         return dxdt
+
+class DT1_Block():
+    def __init__(self, Kp, T1, state_sv = 0):
+        self.Kp = Kp
+        self.T1 = T1
+        self.pt1 = PT1_Block(Kp, T1, state_sv)
+        self.d = D_Block(1)
+
+    def calc(self, u, t0, t1):
+        y_pt1 = self.pt1.calc(u, t0, t1)
+        y_out = self.d.calc(y_pt1[0])
+        return y_out
+
+class PT2_Block():
+    def __init__(self, Kp, T1, T2, state_sv = 0):
+        self.Kp = Kp
+        self.T1 = T1
+        self.T2 = T2
+        self.pt1_1 = PT1_Block(Kp, T1, state_sv)
+        self.pt1_2 = PT1_Block(1, T2, state_sv)
+
+    def calc(self, u, t0, t1):
+        y_pt1 = self.pt1_1.calc(u, t0, t1)
+        y_out = self.pt1_2.calc(y_pt1[0], t0, t1)
+        return y_out
+
+class I_Block(Abstract_Block):
+    def __init__(self, Ki, state_sv):
+        super().__init__(state_sv)
+        self.Ki = Ki
+
+    def ode(self, t, x, u):
+        dxdt = np.array([self.Ki*u])
+        return dxdt
+
+class PI_Block:
+    def __init__(self, Ki, Kp, state_sv = 0):
+        self.Ki = Ki
+        self.Kp = Kp
+        self.i = I_Block(Ki, state_sv)
+
+    def calc(self, u, t0, t1):
+        y_i = self.i.calc(u, t0, t1)
+        y_out = y_i + self.Kp*u
+        return y_out
