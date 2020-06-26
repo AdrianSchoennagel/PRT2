@@ -9,23 +9,37 @@ from input import *
 class Solver:
     def __init__(self, tt):
         self.tt = tt
-        self.state_start = [0, 0, 0, 0, 0]
-        self.pt1 = PT1_Block(para_pt1.Kp, para_pt1.T)
-        self.dt1 = DT1_Block(1, 1)
-        self.pt2 = PT2_Block(1, 1, 1)
-        self.pi  = PI_Block(1, 2)
+        self.state_start = [0, 0, 0, 0, 0, 0]
+        self.p1 = PT2_Block(1, para_p.Ta, para_p.Tb)
+        self.p2 = PT2_Block(para_p.K2, para_p.Tc, para_p.Td)
+        self.sh = DT1_Block(para_sh.K, para_sh.T)
+        self.r  = PI_Block(para_r.Ti, para_r.Kp)
 
     def ode(self, t, x, returnDxDt = True):
-        u = cubic_jump(t)
-        dxdt = np.concatenate((self.pt1.ode(x[0], u), self.dt1.ode(x[1], u), self.pt2.ode(x[2:4], u), self.pi.ode(x[4], u)))
-        y    = np.concatenate((self.pt1.out(x[0], u), self.dt1.out(x[1], u), self.pt2.out(x[2:4], u), self.pi.out(x[4], u)))
+        w = cubic_jump(t, para.ts, para.dts, para.w0, para.w1)
+        z = cubic_jump(t, para.tz, para.dtz, para.z0, para.z1)
+
+        y_p1 = self.p1.out(x[1:3], 0)
+        u_sh = y_p1 #+ z
+        dxdt_sh = self.sh.ode(x[5], u_sh)
+        y_sh = self.sh.out(x[5], u_sh)
+        u_p2 = y_p1 #+ z
+        dxdt_p2 = self.p2.ode(x[3:5], u_p2)
+        y_p2 = self.p2.out(x[3:5], u_p2)
+        u_r = w - (y_sh + y_p2)
+        dxdt_r = self.r.ode(x[0], u_r)
+        y_r = self.r.out(x[0], u_r)
+        dxdt_p1 = self.p1.ode(x[1:3], y_r)
+
         if returnDxDt:
+            dxdt = np.concatenate((dxdt_r, dxdt_p1, dxdt_p2, dxdt_sh))
             return dxdt
         else:
+            y    = np.array([y_r, y_p1, y_p2, y_sh, u_r, w-y_p2])
             return y
 
     def calc(self):
-        solv = sci.solve_ivp(self.ode, (sim_para.t0, sim_para.tf), self.state_start, max_step=sim_para.max_step, t_eval=self.tt)
+        solv = sci.solve_ivp(self.ode, (sim_para.t0, sim_para.tf + sim_para.dt), self.state_start, max_step=sim_para.max_step, t_eval=self.tt)
         ys = None
         for i in range(0, len(self.tt)):
             y = self.ode(self.tt[i], solv.y.T[i], False)
@@ -48,7 +62,7 @@ class PT1_Block():
         return dxdt
 
     def out(self, x, u):
-        return np.array([x])
+        return x
 
 class DT1_Block():
     def __init__(self, Kp, T1):
@@ -60,7 +74,7 @@ class DT1_Block():
         return self.pt1.ode(x, u)
 
     def out(self, x, u):
-        return self.pt1.ode(x, u)
+        return self.pt1.ode(x, u)[0]
 
 class PT2_Block():
     def __init__(self, Kp, T1, T2):
@@ -74,7 +88,7 @@ class PT2_Block():
         return np.array([dxdt0, dxdt1])
 
     def out(self, x, u):
-        return np.array([x[0]])
+        return x[0]
 
 class I_Block():
     def __init__(self, Ki):
@@ -97,4 +111,4 @@ class PI_Block():
         return dxdt
 
     def out(self, x, u):
-        return np.array([x + self.Kp*u])
+        return x + self.Kp*u
